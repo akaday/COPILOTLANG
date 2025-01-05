@@ -1,26 +1,39 @@
 use crate::parser::ASTNode;
 use mlir_sys::{MlirContext, MlirModule, MlirOperation, mlirContextCreate, mlirModuleCreateEmpty, mlirOperationCreate};
+use thiserror::Error;
+use log::{error, info};
 
-pub fn ast_to_mlir(ast: &ASTNode) -> MlirModule {
+#[derive(Error, Debug)]
+pub enum ConversionError {
+    #[error("Expected a program node")]
+    ExpectedProgramNode,
+    #[error("Unsupported AST node")]
+    UnsupportedASTNode,
+}
+
+pub fn ast_to_mlir(ast: &ASTNode) -> Result<MlirModule, ConversionError> {
     let context = unsafe { mlirContextCreate() };
     let module = unsafe { mlirModuleCreateEmpty(context) };
 
     match ast {
         ASTNode::Program(nodes) => {
             for node in nodes {
-                let operation = ast_node_to_mlir_operation(node, context);
+                let operation = ast_node_to_mlir_operation(node, context)?;
                 unsafe {
                     mlirModuleAppendOperation(module, operation);
                 }
             }
         }
-        _ => panic!("Expected a program node"),
+        _ => {
+            error!("Expected a program node");
+            return Err(ConversionError::ExpectedProgramNode);
+        }
     }
 
-    module
+    Ok(module)
 }
 
-fn ast_node_to_mlir_operation(node: &ASTNode, context: MlirContext) -> MlirOperation {
+fn ast_node_to_mlir_operation(node: &ASTNode, context: MlirContext) -> Result<MlirOperation, ConversionError> {
     match node {
         ASTNode::Function { name, params, body } => {
             // Create MLIR operation for function
@@ -72,6 +85,9 @@ fn ast_node_to_mlir_operation(node: &ASTNode, context: MlirContext) -> MlirOpera
             // Pseudocode: mlirOperationCreateBoolLiteral(value)
             unimplemented!()
         }
-        _ => panic!("Unsupported AST node"),
+        _ => {
+            error!("Unsupported AST node");
+            return Err(ConversionError::UnsupportedASTNode);
+        }
     }
 }

@@ -18,6 +18,12 @@ pub enum Token {
     LBrace,
     RBrace,
     Return,
+    If,
+    Else,
+    For,
+    While,
+    True,
+    False,
     Eof,
     Error(String),
 }
@@ -25,6 +31,7 @@ pub enum Token {
 pub struct Lexer {
     input: Vec<char>,
     position: usize,
+    nesting_level: usize,
 }
 
 impl Lexer {
@@ -32,6 +39,7 @@ impl Lexer {
         Self {
             input: input.chars().collect(),
             position: 0,
+            nesting_level: 0,
         }
     }
 
@@ -56,7 +64,7 @@ impl Lexer {
     }
 
     fn is_keyword(s: &str) -> bool {
-        matches!(s, "let" | "function" | "int" | "void" | "return")
+        matches!(s, "let" | "function" | "int" | "void" | "return" | "if" | "else" | "for" | "while" | "true" | "false")
     }
 
     pub fn next_token(&mut self) -> Token {
@@ -75,6 +83,41 @@ impl Lexer {
                     if self.input[self.position..self.position + 7] == ['u', 'n', 'c', 't', 'i', 'o', 'n'] {
                         self.position += 7;
                         return Token::Function;
+                    }
+                }
+                'i' => {
+                    self.advance();
+                    if self.input[self.position..self.position + 1] == ['f'] {
+                        self.position += 1;
+                        return Token::If;
+                    }
+                }
+                'e' => {
+                    self.advance();
+                    if self.input[self.position..self.position + 3] == ['l', 's', 'e'] {
+                        self.position += 3;
+                        return Token::Else;
+                    }
+                }
+                'w' => {
+                    self.advance();
+                    if self.input[self.position..self.position + 4] == ['h', 'i', 'l', 'e'] {
+                        self.position += 4;
+                        return Token::While;
+                    }
+                }
+                't' => {
+                    self.advance();
+                    if self.input[self.position..self.position + 3] == ['r', 'u', 'e'] {
+                        self.position += 3;
+                        return Token::True;
+                    }
+                }
+                'f' => {
+                    self.advance();
+                    if self.input[self.position..self.position + 4] == ['a', 'l', 's', 'e'] {
+                        self.position += 4;
+                        return Token::False;
                     }
                 }
                 '0'..='9' => {
@@ -116,13 +159,25 @@ impl Lexer {
                             }
                         } else if next_char == '*' {
                             self.advance();
+                            self.nesting_level += 1;
                             while let Some(ch) = self.get_char() {
                                 if ch == '*' {
                                     self.advance();
                                     if let Some(next_ch) = self.get_char() {
                                         if next_ch == '/' {
                                             self.advance();
-                                            break;
+                                            self.nesting_level -= 1;
+                                            if self.nesting_level == 0 {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                } else if ch == '/' {
+                                    self.advance();
+                                    if let Some(next_ch) = self.get_char() {
+                                        if next_ch == '*' {
+                                            self.advance();
+                                            self.nesting_level += 1;
                                         }
                                     }
                                 } else {
@@ -151,6 +206,12 @@ impl Lexer {
                             "int" => return Token::TypeInt,
                             "void" => return Token::TypeVoid,
                             "return" => return Token::Return,
+                            "if" => return Token::If,
+                            "else" => return Token::Else,
+                            "for" => return Token::For,
+                            "while" => return Token::While,
+                            "true" => return Token::True,
+                            "false" => return Token::False,
                             _ => {}
                         }
                     } else {

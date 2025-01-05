@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Let,
     Function,
@@ -24,6 +24,7 @@ pub enum Token {
     While,
     True,
     False,
+    Comma,
     Eof,
     Error(String),
 }
@@ -60,7 +61,7 @@ impl Lexer {
     }
 
     fn is_operator(c: char) -> bool {
-        matches!(c, '+' | '-' | '*' | '/' | '=' | ':' | ';' | '(' | ')' | '{' | '}')
+        matches!(c, '+' | '-' | '*' | '/' | '=' | ':' | ';' | '(' | ')' | '{' | '}' | ',')
     }
 
     fn is_keyword(s: &str) -> bool {
@@ -232,6 +233,7 @@ impl Lexer {
                         ')' => return Token::RParen,
                         '{' => return Token::LBrace,
                         '}' => return Token::RBrace,
+                        ',' => return Token::Comma,
                         _ => {}
                     }
                 }

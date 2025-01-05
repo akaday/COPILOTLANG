@@ -53,7 +53,7 @@ impl<'a> Parser<'a> {
         self.current_token = self.lexer.next_token();
     }
 
-    fn parse_program(&mut self) -> ASTNode {
+    pub fn parse_program(&mut self) -> ASTNode {
         let mut nodes = Vec::new();
         while self.current_token != Token::Eof {
             nodes.push(self.parse_statement());

@@ -20,6 +20,8 @@ pub enum Token {
     Return,
     Eof,
     Error(String),
+    MultiLineComment(String),
+    StringLiteral(String),
 }
 
 pub struct Lexer {
@@ -59,6 +61,10 @@ impl Lexer {
         matches!(s, "let" | "function" | "int" | "void" | "return")
     }
 
+    fn is_escape_sequence(c: char) -> bool {
+        matches!(c, 'n' | 't' | '\\' | '"')
+    }
+
     pub fn next_token(&mut self) -> Token {
         while let Some(current_char) = self.get_char() {
             match current_char {
@@ -96,7 +102,16 @@ impl Lexer {
                         if ch == '"' {
                             let value = self.input[start..self.position].iter().collect::<String>();
                             self.advance();
-                            return Token::Identifier(value);
+                            return Token::StringLiteral(value);
+                        } else if ch == '\\' {
+                            self.advance();
+                            if let Some(escape_char) = self.get_char() {
+                                if Lexer::is_escape_sequence(escape_char) {
+                                    self.advance();
+                                } else {
+                                    return Token::Error("Invalid escape sequence".to_string());
+                                }
+                            }
                         } else {
                             self.advance();
                         }
@@ -116,19 +131,22 @@ impl Lexer {
                             }
                         } else if next_char == '*' {
                             self.advance();
+                            let start = self.position;
                             while let Some(ch) = self.get_char() {
                                 if ch == '*' {
                                     self.advance();
                                     if let Some(next_ch) = self.get_char() {
                                         if next_ch == '/' {
+                                            let value = self.input[start..self.position - 1].iter().collect::<String>();
                                             self.advance();
-                                            break;
+                                            return Token::MultiLineComment(value);
                                         }
                                     }
                                 } else {
                                     self.advance();
                                 }
                             }
+                            return Token::Error("Unterminated multi-line comment".to_string());
                         } else {
                             return Token::Slash;
                         }
